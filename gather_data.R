@@ -243,11 +243,11 @@ pf_vars <- c("TIMESTAMP_START",
 # Timestamp start
 # Latent heat flux filtered/gapfilled
 # Sensible heat flux filtered/gapfilled
+# Ground heat flux
 # Incoming shortwave radiation
 # Outgoing shortwave radiation
 # Incoming longwave radiation
 # Outgoing longwave radiation
-# Ground heat fluxes
 # Ambient air temperature
 # Relative humidity
 # Wind speed
@@ -281,9 +281,9 @@ pffn_vars <- c("TIMESTAMP_START",
 # Timestamp start
 # Ground heat flux gapfilled 
 # Ground heat flux gapfill quality flag
-# Incoming shortwave radiation gapfilled
+# Incoming shortwave radiation gapfilled (consolidated from MDS and ERA)
 # Incoming shortwave radiation gapfill quality flag
-# Incoming longwave radiation gapfilled
+# Incoming longwave radiation gapfilled (consolidated from MDS and ERA)
 # Incoming longwave radiation gapfill quality flag
 # Ambient air temperature gapfilled
 # Ambient air temperature gapfill quality flag
@@ -526,6 +526,99 @@ fwrite(anub, file.path(ag_dir, "ANUB.csv"))
 
 #------------------------------------------------------------------------------
 
-#--  --------------------------------------------------------------------
+#-- Atqasuk --------------------------------------------------------------------
+# AmeriFlux has some older data than FluxNet, but missing more recent years
+#   found in FluxNet. 
+
+# AmeriFlux Data
+atqa_vars <- c("TIMESTAMP_START",
+               "LE",
+               "H",
+               "G",
+               "SW_IN",
+               "SW_OUT",
+               "LW_IN",
+               "LW_OUT",
+               "NETRAD",
+               "TA",
+               "RH",
+               "WS",
+               "WD",
+               "P",
+               "TS_1",
+               "TS_2",
+               "SWC_1",
+               "SWC_2")
+
+# Timestamp start
+# Latent heat flux
+# Sensible heat flux
+# Ground heat flux
+# Incoming shortwave radiation
+# Outgoing shortwave radiation
+# Incoming longwave radiation
+# Outgoing longwave radiation
+# Net radiation
+# Ambient air temperature
+# Relative humidity
+# Wind speed
+# Wind direction
+# Precip
+# Soil temperature
+# Soil water content
+
+atqa_path <- file.path(source_data_dir, "AmeriFlux", 
+                       "AMF_US-Atq_BASE-BADM_1-1", 
+                       "AMF_US-Atq_BASE_HH_1-1.csv")
+atqa <- fread(atqa_path, select = atqa_vars, skip = 2)
+
+# FluxNet data
+aqfn_vars <- c("TIMESTAMP_START",
+               "LE_F_MDS",
+               "LE_F_MDS_QC",
+               "H_F_MDS",
+               "H_F_MDS_QC", 
+               "G_F_MDS",
+               "G_F_MDS_QC",
+               "SW_IN_F",
+               "SW_IN_F_QC", 
+               "LW_IN_F",
+               "LW_IN_F_QC",
+               "NETRAD",
+               "TA_F",
+               "TA_F_QC",
+               "RH",
+               "WS_F", 
+               "WS_F_QC",
+               "P_F", 
+               "P_F_QC",
+               "TS_F_MDS_1",
+               "TS_F_MDS_1_QC")
+
+# Timestamp start
+# Ground heat flux gapfilled 
+# Ground heat flux gapfill quality flag
+# Incoming shortwave radiation gapfilled
+# Incoming shortwave radiation gapfill quality flag
+# Incoming longwave radiation gapfilled
+# Incoming longwave radiation gapfill quality flag
+# Ambient air temperature gapfilled
+# Ambient air temperature gapfill quality flag
+# Wind speed gapfilled
+# Wind speed gapfil quality flag
+# Precipitation gapfilled
+# Precipitation gapfill quality flag
+# Soil temperature gapfilled
+# Soil temperature gapfill quality flag
+
+aqfn_path <- file.path(source_data_dir, "FluxNet", 
+                       "FLX_US-Atq_FLUXNET2015_FULLSET_2003-2008_1-3",
+                       "FLX_US-Atq_FLUXNET2015_FULLSET_HH_2003-2008_1-3.csv")
+aqfn <- fread(aqfn_path, select = aqfn_vars)
+
+
+
+# Only TS_1 present in FN. Is this only one measurement, or an average?
+
 
 #------------------------------------------------------------------------------

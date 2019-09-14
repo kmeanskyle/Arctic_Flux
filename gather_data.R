@@ -8,7 +8,12 @@
 #   /data/aggregate/BCFE.csv
 #   /data/aggregate/BCTH.csv
 #   /data/aggregate/PFRR.csv
-
+#   /data/aggregate/OKPT.csv
+#   /data/aggregate/BARW.csv
+#   /data/aggregate/ANSB.csv
+#   /data/aggregate/ANMB.csv
+#   /data/aggregate/ANUB.csv
+#   /data/aggregate/ATQA.csv
 
 
 
@@ -573,6 +578,7 @@ atqa_path <- file.path(source_data_dir, "AmeriFlux",
 atqa <- fread(atqa_path, select = atqa_vars, skip = 2)
 
 # FluxNet data
+# NOT USING FOR NOW. COMPLICATED DISCREPANCIES
 aqfn_vars <- c("TIMESTAMP_START",
                "LE_F_MDS",
                "LE_F_MDS_QC",
@@ -581,7 +587,7 @@ aqfn_vars <- c("TIMESTAMP_START",
                "G_F_MDS",
                "G_F_MDS_QC",
                "SW_IN_F",
-               "SW_IN_F_QC", 
+               "SW_IN_F_QC",
                "LW_IN_F",
                "LW_IN_F_QC",
                "NETRAD",
@@ -611,14 +617,36 @@ aqfn_vars <- c("TIMESTAMP_START",
 # Soil temperature gapfilled
 # Soil temperature gapfill quality flag
 
-aqfn_path <- file.path(source_data_dir, "FluxNet", 
-                       "FLX_US-Atq_FLUXNET2015_FULLSET_2003-2008_1-3",
-                       "FLX_US-Atq_FLUXNET2015_FULLSET_HH_2003-2008_1-3.csv")
-aqfn <- fread(aqfn_path, select = aqfn_vars)
+#aqfn_path <- file.path(source_data_dir, "FluxNet", 
+#                       "FLX_US-Atq_FLUXNET2015_FULLSET_2003-2008_1-3",
+#                       "FLX_US-Atq_FLUXNET2015_FULLSET_HH_2003-2008_1-3.csv")
+#aqfn <- fread(aqfn_path, select = aqfn_vars)
 
+#aq <- aqfn[atqa, on = "TIMESTAMP_START"]
+#aq_clean <- na.omit(aq)
 
+atqa <- convert_ts(atqa)
 
-# Only TS_1 present in FN. Is this only one measurement, or an average?
+# which obs should toil = TS_2
+atqa$tsoil <- -9999
+atqa <- atqa[TS_1 != TS_2 & TS_1 == -9999, tsoil := TS_2]
+atqa <- atqa[TS_1 != TS_2 & TS_2 == -9999, tsoil := TS_1]
+atqa <- atqa[TS_1 != -9999 & TS_2 != -9999, tsoil := (TS_1 + TS_2)/2]
 
+# stid
+atqa$stid <- "atqa"
+new_names <- c("t1", "le", "h", "g", "sw_in", "sw_out", "lw_in", "lw_out", 
+               "rnet", "ta", "rh", "ws", "wd", "precip", "ts1", "ts2", "swc",
+               "swc2", "year", "doy", "hour", "tsoil", "stid")
+names(atqa) <- new_names
 
+# add columns for snow and precip
+atqa$snowd <- NA
+
+# add QC flags as NAs
+atqa <- add_qc(atqa)
+
+atqa <- add_qc(atqa)[, ..sel_cols]
+
+fwrite(atqa, file.path(ag_dir, "ATQA.csv"))
 #------------------------------------------------------------------------------

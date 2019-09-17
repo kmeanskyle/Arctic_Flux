@@ -68,7 +68,7 @@ add_qc <- function(df){
 
 #------------------------------------------------------------------------------
 
-#-- Imnavait Creek ------------------------------------------------------------
+#-- Imnavait Creek & Bonanza Creek (UAF) --------------------------------------
 library(tibble)
 library(lubridate)
 
@@ -649,4 +649,107 @@ atqa <- add_qc(atqa)
 atqa <- add_qc(atqa)[, ..sel_cols]
 
 fwrite(atqa, file.path(ag_dir, "ATQA.csv"))
+#------------------------------------------------------------------------------
+
+#-- Bonanza Creek Delta Junction ----------------------------------------------
+# AmeriFlux Data
+bcd_vars <- c("TIMESTAMP_START",
+              "LE",
+              "H",
+              "G",
+              "SW_IN",
+              "SW_OUT",
+              "LW_IN",
+              "LW_OUT",
+              "NETRAD",
+              "TA",
+              "RH",
+              "WS",
+              "WD",
+              "P",
+              "TS_1",
+              "TS_2",
+              "SWC_1",
+              "SWC_2")
+
+# Timestamp start
+# Latent heat flux
+# Sensible heat flux
+# Ground heat flux
+# Incoming shortwave radiation
+# Outgoing shortwave radiation
+# Incoming longwave radiation
+# Outgoing longwave radiation
+# Net radiation
+# Ambient air temperature
+# Relative humidity
+# Wind speed
+# Wind direction
+# Precip
+# Soil temperature
+# Soil water content
+
+bcda_path <- file.path(source_data_dir, "AmeriFlux", 
+                       "AMF_US-Bn1_BASE-BADM_1-1", 
+                       "AMF_US-Bn1_BASE_HH_1-1.csv")
+bcdb_path <- file.path(source_data_dir, "AmeriFlux", 
+                       "AMF_US-Bn2_BASE-BADM_1-1", 
+                       "AMF_US-Bn2_BASE_HH_1-1.csv")
+bcdc_path <- file.path(source_data_dir, "AmeriFlux", 
+                       "AMF_US-Bn3_BASE-BADM_1-1", 
+                       "AMF_US-Bn3_BASE_HH_1-1.csv")
+
+bcda <- fread(bcda_path, select = bcd_vars, skip = 2)
+bcdb <- fread(bcdb_path, select = bcd_vars, skip = 2)
+bcdc <- fread(bcdc_path, select = bcd_vars, skip = 2)
+
+# convert timestamps
+bcda <- convert_ts(bcda)
+bcdb <- convert_ts(bcdb)
+bcdc <- convert_ts(bcdc)
+
+# function to average over values (or take non-missing value)
+agg_vars <- function(v1, v2) {
+  temp <- -9999
+  temp <- ifelse(v1 != v2 & v1 == -9999, v2, temp)
+  temp <- ifelse(v1 != v2 & v2 == -9999, v1, temp)
+  temp <- ifelse(v1 != v2 & v1 != -9999 & v2 != -9999, (v1 + v2)/2, temp)
+}
+
+# aggregate soil temp measurements
+bcda[, tsoil := agg_vars(TS_1, TS_2)]
+bcdb[, tsoil := agg_vars(TS_1, TS_2)]
+bcdc[, tsoil := agg_vars(TS_1, TS_2)]
+# aggregate soil water content measurements
+bcda[, swc := agg_vars(SWC_1, SWC_2)]
+bcdb[, swc := agg_vars(SWC_1, SWC_2)]
+bcdc[, swc := agg_vars(SWC_1, SWC_2)]
+
+# stid
+bcda[, stid := "bcda"]
+bcdb[, stid := "bcdb"]
+bcdc[, stid := "bcdc"]
+
+# rename
+new_names <- c("t1", "le", "h", "g", "sw_in", "sw_out", "lw_in", "lw_out", 
+               "rnet", "ta", "rh", "ws", "wd", "precip", "ts1", "ts2", "swc1",
+               "swc2", "year", "doy", "hour", "tsoil", "swc", "stid")
+names(bcda) <- new_names
+names(bcdb) <- new_names
+names(bcdc) <- new_names
+
+# add columns for snow and precip
+bcda$snowd <- NA
+bcdb$snowd <- NA
+bcdc$snowd <- NA
+
+# add QC flags as NAs and select columns
+bcda <- add_qc(bcda)[, ..sel_cols]
+bcdb <- add_qc(bcdb)[, ..sel_cols]
+bcdc <- add_qc(bcdc)[, ..sel_cols]
+
+fwrite(bcda, file.path(ag_dir, "BCDA.csv"))
+fwrite(bcdb, file.path(ag_dir, "BCDB.csv"))
+fwrite(bcdc, file.path(ag_dir, "BCDC.csv"))
+
 #------------------------------------------------------------------------------

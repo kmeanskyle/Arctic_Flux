@@ -14,6 +14,7 @@
 #   /data/aggregate/ANMB.csv
 #   /data/aggregate/ANUB.csv
 #   /data/aggregate/ATQA.csv
+#   /data/aggregate/BRWB.csv
 
 
 
@@ -38,33 +39,8 @@ sel_cols <- c("stid", "year", "doy", "hour",  "le", "le_qc", "h", "h_qc", "g",
               "ws_qc", "wd", "precip", "precip_qc", "snowd", "tsoil", 
               "tsoil_qc", "swc", "swc_qc")
 
-# convert hour string to decimal value for integer-valued TIMESTAMP
-convert_ts <- function(df){
-  require(lubridate)
-  
-  convert_hour <- function(x){
-    x <- hms(paste0(substr(x, 9, 10), ":",
-                    substr(x, 11, 12), ":00"))
-    hour(x) + minute(x)/60
-  }
-  
-  df <- df[, c("year", "doy", "hour") := 
-            .(substr(TIMESTAMP_START, 1, 4),
-                yday(ymd(substr(TIMESTAMP_START, 1, 8))),
-                convert_hour(TIMESTAMP_START))]
-  
-  return(df)
-}
-
-# write a function that adds quality flags with values of NA where not present
-add_qc <- function(df){
-  vars <- names(df)[-which(names(df) %in% c("year", "doy", "hour", "snowd",
-                                            "stid"))]
-  if(any(grep("qc", vars))){vars <- vars[-grep("qc", vars)]}
-  qc_vars <- paste0(vars, "_qc")
-  df <- df[, (qc_vars) := NA]
-  return(df)
-}
+# import helper functions
+source(file.path(workdir, "helpers.R"))
 
 #------------------------------------------------------------------------------
 
@@ -627,7 +603,7 @@ aqfn_vars <- c("TIMESTAMP_START",
 
 atqa <- convert_ts(atqa)
 
-# which obs should toil = TS_2
+# which obs should tsoil = TS_2
 atqa$tsoil <- -9999
 atqa <- atqa[TS_1 != TS_2 & TS_1 == -9999, tsoil := TS_2]
 atqa <- atqa[TS_1 != TS_2 & TS_2 == -9999, tsoil := TS_1]
@@ -649,6 +625,7 @@ atqa <- add_qc(atqa)
 atqa <- add_qc(atqa)[, ..sel_cols]
 
 fwrite(atqa, file.path(ag_dir, "ATQA.csv"))
+
 #------------------------------------------------------------------------------
 
 #-- Bonanza Creek Delta Junction ----------------------------------------------
@@ -708,14 +685,6 @@ bcda <- convert_ts(bcda)
 bcdb <- convert_ts(bcdb)
 bcdc <- convert_ts(bcdc)
 
-# function to average over values (or take non-missing value)
-agg_vars <- function(v1, v2) {
-  temp <- -9999
-  temp <- ifelse(v1 != v2 & v1 == -9999, v2, temp)
-  temp <- ifelse(v1 != v2 & v2 == -9999, v1, temp)
-  temp <- ifelse(v1 != v2 & v1 != -9999 & v2 != -9999, (v1 + v2)/2, temp)
-}
-
 # aggregate soil temp measurements
 bcda[, tsoil := agg_vars(TS_1, TS_2)]
 bcdb[, tsoil := agg_vars(TS_1, TS_2)]
@@ -751,5 +720,183 @@ bcdc <- add_qc(bcdc)[, ..sel_cols]
 fwrite(bcda, file.path(ag_dir, "BCDA.csv"))
 fwrite(bcdb, file.path(ag_dir, "BCDB.csv"))
 fwrite(bcdc, file.path(ag_dir, "BCDC.csv"))
+
+#------------------------------------------------------------------------------
+
+#-- Barrow (Non-ARM) ----------------------------------------------------------
+# AmeriFlux Data
+brw_vars <- c("TIMESTAMP_START",
+              "LE",
+              "H",
+              "G",
+              "NETRAD",
+              "TA",
+              "RH",
+              "WS",
+              "WD",
+              "P",
+              "TS_1",
+              "TS_2")
+
+# Timestamp start
+# Latent heat flux
+# Sensible heat flux
+# Ground heat flux
+# Incoming shortwave radiation
+# Outgoing shortwave radiation
+# Incoming longwave radiation
+# Outgoing longwave radiation
+# Net radiation
+# Ambient air temperature
+# Relative humidity
+# Wind speed
+# Wind direction
+# Precip
+# Soil temperature
+# Soil water content
+
+brwb_path <- file.path(source_data_dir, "AmeriFlux", 
+                       "AMF_US-Brw_BASE-BADM_2-1", 
+                       "AMF_US-Brw_BASE_HH_2-1.csv")
+
+brwb <- fread(brwb_path, select = brw_vars, skip = 2)
+
+# convert timestamps
+brwb <- convert_ts(brwb)
+
+# aggregate soil temp measurements
+brwb[, tsoil := agg_vars(TS_1, TS_2)]
+
+# stid
+brwb[, stid := "brwb"]
+
+# rename
+new_names <- c("t1", "le", "h", "g", "rnet", "ta", "rh", "ws", "wd", "precip", 
+               "ts1", "ts2", "year", "doy", "hour", "tsoil", "stid")
+names(brwb) <- new_names
+
+# add columns for snow and precip
+brwb$sw_in <- NA
+brwb$sw_out <- NA
+brwb$lw_in <- NA
+brwb$lw_out <- NA
+brwb$snowd <- NA
+brwb$swc <- NA
+
+# add QC flags as NAs and select columns
+brwb <- add_qc(brwb)[, ..sel_cols]
+
+fwrite(brwb, file.path(ag_dir, "BRWB.csv"))
+
+#------------------------------------------------------------------------------
+
+#-- Eight Mile Lake -----------------------------------------------------------
+# AmeriFlux Data
+eml_vars <- c("TIMESTAMP_START",
+              "LE",
+              "H",
+              "SW_IN",
+              "SW_IN_PI_F",
+              "SW_OUT",
+              "LW_IN",
+              "LW_OUT",
+              "NETRAD",
+              "NETRAD_PI_F",
+              "TA",
+              "TA_PI_F",
+              "RH",
+              "RH_PI_F",
+              "WS",
+              "WD",
+              "D_SNOW",
+              "TS",
+              "TS_1_1_1",
+              "TS_2_1_1",
+              "SWC", 
+              "SWC_1_1_1", 
+              "SWC_2_1_1")
+
+# Timestamp start
+# Latent heat flux
+# Sensible heat flux
+# Ground heat flux
+# Incoming shortwave radiation
+# Outgoing shortwave radiation
+# Incoming longwave radiation
+# Outgoing longwave radiation
+# Net radiation
+# Ambient air temperature
+# Relative humidity
+# Wind speed
+# Wind direction
+# Precip
+# Soil temperature
+# Soil water content
+
+emlh_path <- file.path(source_data_dir, "AmeriFlux", 
+                       "AMF_US-EML_BASE-BADM_3-5", 
+                       "AMF_US-EML_BASE_HH_3-5.csv")
+
+emlh <- fread(emlh_path, select = eml_vars, skip = 2)
+
+apply(emlh, 2, function(x) all(x == -9999))
+
+# convert timestamps
+emlh <- convert_ts(emlh)
+
+# aggregate soil temp measurements
+emlh[, tsoil := agg_vars(TS_1_1_1, TS_2_1_1)]
+emlh[TS != -9999, tsoil := TS]
+# aggregate soil water content measurements
+emlh[, swc := agg_vars(SWC_1_1_1, SWC_2_1_1)]
+emlh[SWC != -9999, swc := SWC]
+
+# need to combine gapfilled vars with observed
+# Reltaive humidity
+emlh[, ':=' (rh = -9999,
+             rh_qc = as.numeric(NA))]
+emlh[RH != -9999, ':=' (rh = RH, 
+                        rh_qc = 0)]
+emlh[RH_PI_F != -9999 & RH == -9999, ':=' (rh = RH_PI_F,
+                                           rh_qc = 1)]
+# temperature
+emlh[, ':=' (ta = -9999,
+             ta_qc = as.numeric(NA))]
+emlh[TA != -9999, ':=' (ta = RH, 
+                        ta_qc = 0)]
+emlh[TA_PI_F != -9999 & TA == -9999, ':=' (ta = TA_PI_F,
+                                           ta_qc = 1)]
+# Incoming shortwave radiation
+emlh[, ':=' (sw_in = -9999,
+             sw_in_qc = as.numeric(NA))]
+emlh[SW_IN != -9999, ':=' (sw_in = SW_IN, 
+                           sw_in_qc = 0)]
+emlh[SW_IN_PI_F != -9999 & SW_IN == -9999, ':=' (sw_in = SW_IN_PI_F,
+                                                 sw_in_qc = 1)]
+# Net radiation
+emlh[, ':=' (rnet = -9999,
+             rnet_qc = as.numeric(NA))]
+emlh[NETRAD != -9999, ':=' (rnet = RH, 
+                            rnet_qc = 0)]
+emlh[NETRAD_PI_F != -9999 & NETRAD == -9999, ':=' (rnet = NETRAD_PI_F,
+                                                   rnet_qc = 1)]
+
+# stid
+emlh[, stid := "emlh"]
+
+# rename
+new_names <- c("t1", "le", "h", "t2", "t3", "sw_out", "lw_in", "lw_out", "t4",
+               "t5", "t6", "t7", "t8", "t9", "ws", "wd", "snowd", 
+               paste0("t", 10:15), names(emlh)[24:37])
+names(emlh) <- new_names
+
+# add columns for snow and precip
+emlh[, g := NA]
+emlh[, precip := NA]
+
+# add QC flags as NAs and select columns
+emlh <- add_qc(emlh)[, ..sel_cols]
+
+fwrite(emlh, file.path(ag_dir, "EMLH.csv"))
 
 #------------------------------------------------------------------------------

@@ -29,9 +29,6 @@ ag_dir <- file.path(datadir, "aggregate")
 # downloaded data stored in external drive
 source_data_dir <- "F:/Arctic_Flux/raw_data"
 
-# store data of interest in new db
-agg_dir <- file.path(source_data_dir, "iarc_db/aggregate")
-
 # select column names in order
 sel_cols <- c("stid", "year", "doy", "hour",  "le", "le_qc", "h", "h_qc", "g", 
               "g_qc", "sw_in", "sw_in_qc", "sw_out", "lw_in", "lw_in_qc", 
@@ -105,18 +102,33 @@ ic_vars <- c("Year",
 # Soil temperature 2
 # Soil water content filtered
 
+# fread for files with units line under header (line 2 here)
+# causes unnecessary coercion
+my_fread <- function(fn) {
+  name_vec <- unlist(unname(fread(fn, nrows = 1, header = FALSE)))
+  DT <- fread(fn, skip = 2)
+  names(DT) <- name_vec
+  return(DT)
+}
+
 # 1523 (wet sedge fen)
 icfe_path <- file.path(source_data_dir, "Eugenie_data",
-                             "IC_1523_gapfilled_2008_2013.csv")
-icfe <- fread(icfe_path)
+                       "IC_1523_gapfilled_2008_2013.csv")
+icfe14_path <- file.path(source_data_dir, "Eugenie_data",
+                         "2014_IC_1523_gapfilled_20141231.csv")
 # This .csv is saved with a comma at end of each row, preventing use of
 #   "select" argument of fread()
+icfe <- my_fread(icfe_path)
+icfe14 <- my_fread(icfe14_path)
+
 names(icfe) <- unlist(icfe[1, ])
 icfe <- icfe[-c(1, 2), ..ic_vars]
+
 # 1991 (ridge)
 icri_path <- file.path(source_data_dir, "Eugenie_data",
                        "IC_1991_gapfilled_2008_2013.csv")
 icri <- fread(icri_path, select = ic_vars)[-1, ]
+
 # 1993 (tussock)
 ictu_path <- file.path(source_data_dir, "Eugenie_data",
                         "IC_1993_gapfilled_2008_2013.csv")
@@ -128,6 +140,7 @@ bc_vars <- ic_vars
 bcfe_path <- file.path(source_data_dir, "Eugenie_data",
                        "2013_2016_BC_FEN_gapfilled_DT.csv")
 bcfe <- fread(bcfe_path, select = bc_vars)[-1, ]
+
 # 5166 (Thermokarst)
 bcth_path <- file.path(source_data_dir, "Eugenie_data",
                         "2013_2016_BC_5166_gapfilled_DT.csv")

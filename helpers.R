@@ -40,5 +40,17 @@ fix_names <- function(DT) {
   # contains the var names besing used as the header and other potential
   #   names to be changed in each column
   names_df <- read.csv("data/var_names.csv")
+  rul_names <- names(names_df)
+  dt_names <- names(DT)
+  get_name <- function(varname) {
+    outname <- varname
+    if(varname %in% rul_names) {
+      outname <- varname
+    } else {
+      outname <- rul_names[which(apply(names_df, 2, function(x) varname %in% x))]
+    }
+  }
+  names(DT) <- unlist(lapply(dt_names, get_name))
+  return(DT[, ..sel_cols])
 }
 

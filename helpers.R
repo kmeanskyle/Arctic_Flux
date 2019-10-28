@@ -42,15 +42,28 @@ fix_names <- function(DT) {
   names_df <- read.csv("data/var_names.csv")
   rul_names <- names(names_df)
   dt_names <- names(DT)
+  # get universal var name given unique var name
   get_name <- function(varname) {
     outname <- varname
-    if(varname %in% rul_names) {
-      outname <- varname
-    } else {
-      outname <- rul_names[which(apply(names_df, 2, function(x) varname %in% x))]
+    if(!(varname %in% rul_names)) {
+      lookup <- rul_names[which(apply(names_df, 2, function(x) varname %in% x))]
+      if(length(lookup) != 0) outname <- lookup
     }
+    return(outname)
   }
-  names(DT) <- unlist(lapply(dt_names, get_name))
-  return(DT[, ..sel_cols])
+  new_names <- unlist(lapply(dt_names, get_name))
+  keep_names <- c(intersect(new_names, rul_names), "stid")
+  names(DT) <- new_names
+  # add stid
+  DT[, stid := stid]
+  
+  return(DT[, ..keep_names])
 }
 
+# Universal variable names
+# select aggregate column names in order
+sel_cols <- c("stid", "year", "doy", "hour",  "le", "le_qc", "h", "h_qc", "g", 
+              "g_qc", "sw_in", "sw_in_qc", "sw_out", "lw_in", "lw_in_qc", 
+              "lw_out", "rnet", "rnet_qc", "ta", "ta_qc", "rh", "rh_qc", "ws", 
+              "ws_qc", "wd", "precip", "precip_qc", "snowd", "tsoil", 
+              "tsoil_qc", "swc", "swc_qc")

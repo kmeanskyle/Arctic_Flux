@@ -8,12 +8,13 @@
 #   /data/aggregate/ICTU.csv
 #   /data/aggregate/BCFE.csv
 #   /data/aggregate/BCTH.csv
+#   /data/aggregate/BCOB.csv
 
 #-- Setup --------------------------------------------------------------------
 
 # fread for files with units line under header (line 2 here)
 # causes unnecessary coercion
-my_fread <- function(path, vars = NULL) {
+my_fread <- function(path, vars) {
   name_vec <- unlist(unname(fread(path, nrows = 1, header = FALSE)))
   DT <- fread(path, skip = 2)
   names(DT) <- name_vec
@@ -24,6 +25,9 @@ my_fread <- function(path, vars = NULL) {
     miss_vars <- setdiff(vars, name_vec)
     if(length(miss_vars) > 0) DT[, (miss_vars) := NA]
   }
+  # convert logical columns (seem to result from all-NA columns) to numeric
+  changeCols <- names(DT)[sapply(DT, is.logical)]
+  DT[,(changeCols) := lapply(.SD, as.numeric), .SDcols = changeCols]
   return(DT[, ..vars])
 }
 
@@ -61,6 +65,8 @@ aggr_vars <- function(DT){
 
 # apply to list of paths and save
 wrap_funs <- function(paths, stid) {
+  library(magrittr)
+  library(data.table)
   lapply(paths, my_fread, ic_vars) %>%
     rbindlist %>%
     aggr_vars %>%
@@ -72,9 +78,6 @@ wrap_funs <- function(paths, stid) {
 #------------------------------------------------------------------------------
 
 #-- Main ----------------------------------------------------------------------
-
-library(magrittr)
-library(data.table)
 
 # downloaded data stored in external drive
 raw_dir <- "F:/Arctic_Flux/raw_data/ICBC"
@@ -182,7 +185,7 @@ fwrite(bcth, file.path(ag_dir, "BCTH.csv"))
 # BCOB (Old Bog)
 fns <- c("2018_BC_OldBog_gapfilled_20181231.csv")
 bcob_paths <- file.path(raw_dir, fns)
-bcfe <- wrap_funs(bcfe_paths, "bcfe")
-fwrite(bcfe, file.path(ag_dir, "BCFE.csv"))
+bcob <- wrap_funs(bcob_paths, "bcob")
+fwrite(bcob, file.path(ag_dir, "BCOB.csv"))
 
 #------------------------------------------------------------------------------

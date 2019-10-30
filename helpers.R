@@ -17,10 +17,13 @@ convert_ts <- function(DT){
 
 # write a function that adds quality flags with values of NA where not present
 add_qc <- function(DT){
-  vars <- names(DT)[-which(names(DT) %in% c("year", "doy", "hour", "snowd",
-                                            "stid"))]
-  if(any(grep("qc", vars))){vars <- vars[-grep("qc", vars)]}
-  qc_vars <- paste0(vars, "_qc")
+  # vars where there are no quality flags in any of the flux datasets seen (yet)
+  no_qc_vars <- c("year", "doy", "hour", "sw_out", "lw_out", "wd", "snowd", 
+                  "stid")
+  vars <- names(DT)[-which(names(DT) %in% no_qc_vars)]
+  qci <- grep("qc", vars)
+  qc_vars <- setdiff(vars, c(gsub("_qc", "", vars[qci]), vars[qci]))
+  qc_vars <- paste0(qc_vars, "_qc")
   DT <- DT[, (qc_vars) := NA]
   return(DT)
 }
@@ -35,7 +38,7 @@ agg_vars <- function(v1, v2) {
 
 # fix the names for a given DT which has all of the appropriate vars 
 #   but wrong names
-fix_names <- function(DT) {
+fix_names <- function(DT, stid) {
   # read master var name compatability file
   # contains the var names besing used as the header and other potential
   #   names to be changed in each column
@@ -61,9 +64,12 @@ fix_names <- function(DT) {
 }
 
 # Universal variable names
-# select aggregate column names in order
-sel_cols <- c("stid", "year", "doy", "hour",  "le", "le_qc", "h", "h_qc", "g", 
-              "g_qc", "sw_in", "sw_in_qc", "sw_out", "lw_in", "lw_in_qc", 
-              "lw_out", "rnet", "rnet_qc", "ta", "ta_qc", "rh", "rh_qc", "ws", 
-              "ws_qc", "wd", "precip", "precip_qc", "snowd", "tsoil", 
-              "tsoil_qc", "swc", "swc_qc")
+# arrange column names in universal order
+sel_cols <- function(DT) {
+  sel_cols <- c("stid", "year", "doy", "hour",  "le", "le_qc", "h", "h_qc", "g", 
+                "g_qc", "sw_in", "sw_in_qc", "sw_out", "lw_in", "lw_in_qc", 
+                "lw_out", "rnet", "rnet_qc", "ta", "ta_qc", "rh", "rh_qc", "ws", 
+                "ws_qc", "wd", "precip", "precip_qc", "snowd", "tsoil", 
+                "tsoil_qc", "swc", "swc_qc")
+  DT[, ..sel_cols]
+}

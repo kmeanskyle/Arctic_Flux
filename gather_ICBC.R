@@ -32,7 +32,7 @@ my_fread <- function(path, vars) {
 }
 
 # aggregate appropriate vars
-aggr_vars <- function(DT){
+aggr_vars <- function(DT, g_s){
   # aggregate vars by setting -9999 to NA (and revert back)
   #   first set NAs to -9998 (need to preserve NAs bc in one of datasets, 
   #   some vars were not measured (e.g. Rlong in 2018))
@@ -44,7 +44,7 @@ aggr_vars <- function(DT){
                             j = col, value = NA)
   # ground fluxes
   DT <- DT[, g := rowMeans(.SD, na.rm = TRUE), 
-           .SDcols = c("G1_f", "G2_f", "G3_f", "G4_f")]
+           .SDcols = g_s]
   # soil temps
   DT <- DT[, tsoil := rowMeans(.SD, na.rm = TRUE),
            .SDcols = c("Tsoil_gf", "Tsoil_2")]
@@ -64,13 +64,13 @@ aggr_vars <- function(DT){
 }
 
 # apply to list of paths and save
-wrap_funs <- function(paths, stid) {
+wrap_funs <- function(paths, args) {
   library(magrittr)
   library(data.table)
   lapply(paths, my_fread, ic_vars) %>%
     rbindlist %>%
-    aggr_vars %>%
-    fix_names(stid) %>%
+    aggr_vars(args$g_s) %>%
+    fix_names(args$stid) %>%
     add_qc %>%
     sel_cols
 }
@@ -80,7 +80,7 @@ wrap_funs <- function(paths, stid) {
 #-- Main ----------------------------------------------------------------------
 
 # downloaded data stored in external drive
-raw_dir <- "F:/Arctic_Flux/raw_data/ICBC"
+raw_dir <- "F:/raw_data/Arctic_Flux/ICBC"
 # "aggregate" data dir for saving output
 ag_dir <- "data/aggregate"
 
@@ -153,19 +153,21 @@ fns <- c("IC_1523_gapfilled_2008_2013.csv",
          "2018_IC_1523_gapfilled_20181231.csv")
 icfe_paths <- file.path(raw_dir, fns)
 # aggregate data and save
-icfe <- wrap_funs(icfe_paths, "icfe")
+g_s <- c("G1_f", "G2_f", "G3_f", "G4_f")
+icfe_args <- list(stid = "icfe", g_s = g_s)
+icfe <- wrap_funs(icfe_paths, icfe_args)
 fwrite(icfe, file.path(ag_dir, "ICFE.csv"))
 
 # ICRI (1991, ridge)
 icri_paths <- file.path(raw_dir, gsub("1523", "1991", fns))
-# aggregate data and save
-icri <- wrap_funs(icri_paths, "icri")
+icri_args <- list(stid = "icri", g_s = g_s)
+icri <- wrap_funs(icri_paths, icri_args)
 fwrite(icri, file.path(ag_dir, "ICRI.csv"))
 
 # ICTU (1993, tussock)
 ictu_paths <- file.path(raw_dir, gsub("1523", "1993", fns))
-# aggregate data and save
-ictu <- wrap_funs(ictu_paths, "ictu")
+ictu_args <- list(stid = "ictu", g_s = g_s)
+ictu <- wrap_funs(ictu_paths, ictu_args)
 fwrite(ictu, file.path(ag_dir, "ICTU.csv"))
 
 # BCFE (Fen) 
@@ -173,19 +175,21 @@ fns <- c("2013_2016_BC_FEN_gapfilled_DT.csv",
          "2017_BC_FEN_gapfilled_20171231.csv",
          "2018_BC_FEN_gapfilled_20181231.csv")
 bcfe_paths <- file.path(raw_dir, fns)
-bcfe <- wrap_funs(bcfe_paths, "bcfe")
+bcfe_args <- list(stid = "bcfe", g_s = g_s)
+bcfe <- wrap_funs(bcfe_paths, bcfe_args)
 fwrite(bcfe, file.path(ag_dir, "BCFE.csv"))
 
 # BCTH (Thermokarst)
 bcth_paths <- file.path(raw_dir, gsub("FEN", "5166", fns))
-# aggregate data and save
-bcth <- wrap_funs(bcth_paths, "bcth")
+bcth_args <- list(stid = "bcth", g_s = g_s[3:4])
+bcth <- wrap_funs(bcth_paths, bcth_args)
 fwrite(bcth, file.path(ag_dir, "BCTH.csv"))
 
 # BCOB (Old Bog)
 fns <- c("2018_BC_OldBog_gapfilled_20181231.csv")
 bcob_paths <- file.path(raw_dir, fns)
-bcob <- wrap_funs(bcob_paths, "bcob")
+bcobargs <- list(stid = "bcob", g_s = g_s)
+bcob <- wrap_funs(bcob_paths, bcob_args)
 fwrite(bcob, file.path(ag_dir, "BCOB.csv"))
 
 #------------------------------------------------------------------------------

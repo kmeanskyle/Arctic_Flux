@@ -188,7 +188,7 @@ fwrite(bcth, file.path(ag_dir, "BCTH.csv"))
 # BCOB (Old Bog)
 fns <- c("2018_BC_OldBog_gapfilled_20181231.csv")
 bcob_paths <- file.path(raw_dir, fns)
-bcobargs <- list(stid = "bcob", g_s = g_s)
+bcob_args <- list(stid = "bcob", g_s = g_s)
 bcob <- wrap_funs(bcob_paths, bcob_args)
 fwrite(bcob, file.path(ag_dir, "BCOB.csv"))
 

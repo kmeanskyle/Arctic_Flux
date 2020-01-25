@@ -1,9 +1,9 @@
 # Script Summary
-#   compile flux data sets from data collected at Poker Flat Research Range
+#   Compile dataset from data collected at Poker Flat Research Range 
+#   (PI: H. Kobayashi)
 #
 # Output files:
-#   /data/aggregate/PFRR.csv
-#   /data/aggregate/PFDB.csv
+#   ../data/Arctic_Flux/aggregate/PFRR.csv
 
 #-- Setup ---------------------------------------------------------------------
 # master function for creating new columns
@@ -26,10 +26,18 @@ mk_vars <- function(DT, var_key, mk_opt) {
     target
   }
   # add qc flags for gapfilled measurements where qc flag not included
-  #   0 for "close" to observed value, -9999 otherwise (unknown gapfill quality)
+  #   and where raw data available. 0 for "close" to observed value, -9999 
+  #   otherwise (unknown gapfill quality)
   fill_qc <- function(vars) {
     rpl <- DT[[vars[2]]] != -9999 & DT[[vars[3]]] != -9999 & 
       abs(DT[[vars[2]]] - DT[[vars[3]]]) < 5
+    new_vec <- rep(-9999, dim(DT)[1])
+    new_vec[rpl] <- 0
+    new_vec
+  }
+  # qc flags are either 0 or -9999. Assign 0 if both are 0, else -9999
+  aggr_qc <- function(vars) {
+    rpl <- DT[[vars[2]]] == 0 & DT[[vars[3]]] == 0
     new_vec <- rep(-9999, dim(DT)[1])
     new_vec[rpl] <- 0
     new_vec
@@ -38,7 +46,8 @@ mk_vars <- function(DT, var_key, mk_opt) {
   new_data <- lapply(var_key, switch(mk_opt, 
                                      aggr = aggr,
                                      mesh = mesh,
-                                     fill_qc = fill_qc))
+                                     fill_qc = fill_qc,
+                                     aggr_qc = aggr_qc))
   
   new_cols <- unlist(lapply(var_key, function(vars) vars[1]))
   DT[, (new_cols) := new_data]
@@ -198,8 +207,3 @@ pf <- sel_cols(pf)
 fwrite(pf, "../data/Arctic_Flux/aggregate/PFRR.csv")
 
 #------------------------------------------------------------------------------
-
-#-- PFDB ----------------------------------------------------------------------
-# PFDB is only ofund in AmeriFlux database
-
-# need to check that any variables with "F" are either gapfilled or filtered

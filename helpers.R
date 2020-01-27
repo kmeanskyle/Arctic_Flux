@@ -63,7 +63,7 @@ calc_rnet <- function(DT) {
   temp_dt <- DT[, .(sw_in_qc, lw_in_qc)]
   qc_fun <- function(qc_val){
     if(any(is.na(qc_val))) {
-      NA
+      as.numeric(NA)
     } else if (any(qc_val == -9999)) {
       -9999
     } else {max(qc_val)}

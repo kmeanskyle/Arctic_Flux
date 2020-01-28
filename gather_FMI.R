@@ -1,5 +1,5 @@
 # Script Summary
-#   Compile datasets from flux data collected in Finland by researchers at 
+#   Compile datasets from flux data collected by researchers at 
 #   the Finnish Meteorological Institute (PI: A. Lohila)
 #
 # Output files:
@@ -65,34 +65,42 @@ jo_vars <- c(
 
 le_vars <- jo_vars[-grep("SWC", jo_vars)]
 so_vars <- jo_vars[-grep("OUT", jo_vars)]
+tk_vars <- jo_vars[-grep("G", jo_vars)]
 
 jo_fp <- "../raw_data/FluxNet/FLX_FI-Jok_FLUXNET2015_FULLSET_2000-2003_1-3/FLX_FI-Jok_FLUXNET2015_FULLSET_HH_2000-2003_1-3.csv"
 le_fp <- gsub("Jok", "Let", jo_fp)
 le_fp <- gsub("2000-2003", "2009-2012", le_fp)
 so_fp <- gsub("Jok", "Sod", jo_fp)
 so_fp <- gsub("2000-2003", "2001-2014", so_fp)
+tk_fp <- gsub("FI-Jok", "RU-Tks", jo_fp)
+tk_fp <- gsub("2000-2003", "2010-2014", tk_fp)
 
 jo <- fread(jo_fp, select = jo_vars)
 le <- fread(le_fp, select = le_vars)
 so <- fread(so_fp, select = so_vars)
+tk <- fread(tk_fp, select = tk_vars)
 
 # convert times
 jo <- convert_ts(jo)
 le <- convert_ts(le)
 so <- convert_ts(so)
+tk <- convert_ts(tk)
 
 # site ids
 jo[, stid := "FIJO"]
 le[, stid := "FILE"]
 so[, stid := "FISO"]
+tk[, stid := "RUTK"]
 
 # add missing vars as NA
 jo_miss <- c("snowd", "lw_out")
 le_miss <- c(jo_miss, "swc")
 so_miss <- c(jo_miss, "sw_out")
+tk_miss <- c(jo_miss, "g")
 jo <- mk_vars(jo, jo_miss, "miss")
 le <- mk_vars(le, le_miss, "miss")
 so <- mk_vars(so, so_miss, "miss")
+tk <- mk_vars(tk, tk_miss, "miss")
 
 jo_names <- list(
   c("LE_F_MDS", "le"),
@@ -123,18 +131,22 @@ jo_names <- list(
 
 le_names <- jo_names[-(23:24)]
 so_names <- jo_names[-(11)]
+tk_names <- jo_names[-(5:6)]
 
 jo <- fix_names(jo, jo_names)
 le <- fix_names(le, le_names)
 so <- fix_names(so, so_names)
+tk <- fix_names(tk, tk_names)
 
 # add NA qa flags and select cols
 jo <- sel_cols(add_qc(jo))
 le <- sel_cols(add_qc(le))
 so <- sel_cols(add_qc(so))
+tk <- sel_cols(add_qc(tk))
 
 fwrite(jo, "../data/Arctic_Flux/aggregate/FIJO.csv")
 fwrite(le, "../data/Arctic_Flux/aggregate/FILE.csv")
 fwrite(so, "../data/Arctic_Flux/aggregate/FISO.csv")
+fwrite(tk, "../data/Arctic_Flux/aggregate/RUTK.csv")
 
 #------------------------------------------------------------------------------

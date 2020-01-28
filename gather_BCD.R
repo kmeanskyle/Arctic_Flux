@@ -1,4 +1,3 @@
-
 # Script Summary
 #   Compile datasets from flux data collected at Scotty Creek sites
 #   (PI: M. Helbig)

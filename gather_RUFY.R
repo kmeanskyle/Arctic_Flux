@@ -1,9 +1,10 @@
 # Script Summary
-#   Compile dataset from flux data collected at Fyodorovskoye 
+#   Compile dataset from flux data collected at Fyodorovskoye 1 & 2
 #   (PI: A. Varlagin)
 #
 # Output files:
-#   ../data/Arctic_Flux/aggregate/RUFY.csv
+#   ../data/Arctic_Flux/aggregate/RUFA.csv
+#   ../data/Arctic_Flux/aggregate/RUFB.csv
 
 #-- Setup ---------------------------------------------------------------------
 # master function for creating new columns
@@ -20,6 +21,13 @@ mk_vars <- function(DT, var_key, mk_opt) {
   DT
 }
 
+# fread for multiple filepaths
+my_fread <- function(fps) {
+  rbindlist(lapply(fps, function(fp) {
+    fread(fp)
+  }))
+}
+
 #------------------------------------------------------------------------------
 
 #-- Main ----------------------------------------------------------------------
@@ -27,7 +35,7 @@ suppressMessages(library(data.table))
 
 source("helpers.R")
 
-fy_vars <- c(
+fa_vars <- c(
   "TIMESTAMP_START",
   "LE_F_MDS", "LE_F_MDS_QC",
   "H_F_MDS", "H_F_MDS_QC",
@@ -62,19 +70,31 @@ fy_vars <- c(
 # Soil temperature (filtered/gapfilled plus qc flag)
 # Soil water content (filtered/gapfilled plus qc flag)
 
-fy_fp <- "../raw_data/FluxNet/FLX_RU-Fyo_FLUXNET2015_FULLSET_1998-2014_2-3/FLX_RU-Fyo_FLUXNET2015_FULLSET_HH_1998-2014_2-3.csv"
-fy <- fread(fy_fp, select = fy_vars)
+fa_fp <- "../raw_data/FluxNet/FLX_RU-Fyo_FLUXNET2015_FULLSET_1998-2014_2-3/FLX_RU-Fyo_FLUXNET2015_FULLSET_HH_1998-2014_2-3.csv"
+
+fb_fp <- "../raw_data/EFDC/1911409666/EFDC_L2_Flx_RUFy2_2015_v02_30m.txt"
+fb_fps <- sapply(
+  c("2016_v03", "2017_v04", "2018_v04"), 
+  function(yr) gsub("2015_v02", yr, fb_fp), 
+  USE.NAMES = FALSE
+)
+
+fa <- fread(fa_fp, select = fa_vars)
+fb <- my_fread(fb_fp)
 
 # convert times
-fy <- convert_ts(fy)
+fa <- convert_ts(fa)
+fb <- convert_ts(fb)
 
 # site ids
-fy[, stid := "RUFY"]
+fa[, stid := "RUFA"]
+fb[, stid := "RUFB"]
 
 # add missing vars as NA
-fy[, snowd := NA]
+fa[, snowd := NA]
+fb[, snowd := NA]
 
-fy_names <- list(
+fa_names <- list(
   c("LE_F_MDS", "le"),
   c("LE_F_MDS_QC", "le_qc"),
   c("H_F_MDS", "h"),
@@ -102,11 +122,21 @@ fy_names <- list(
   c("SWC_F_MDS_1_QC", "swc_qc")
 )
 
-fy <- fix_names(fy, fy_names)
+fb_names <- lapply(fa_names, function(vars) {
+  new <- gsub("_F_MDS", "", vars)
+  new <- gsub("_F", "", new)
+  gsub("_1", "", new)
+})
+fb_names <- fb_names[-grep("_QC", fb_names)]
+
+fa <- fix_names(fa, fa_names)
+fb <- fix_names(fb, fb_names)
 
 # add NA qa flags and select cols
-fy <- sel_cols(add_qc(fy))
+fa <- sel_cols(add_qc(fa))
+fb <- sel_cols(add_qc(fb))
 
-fwrite(fy, "../data/Arctic_Flux/aggregate/RUFY.csv")
+fwrite(fa, "../data/Arctic_Flux/aggregate/RUFA.csv")
+fwrite(fb, "../data/Arctic_Flux/aggregate/RUFB.csv")
 
 #------------------------------------------------------------------------------

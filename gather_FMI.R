@@ -1,11 +1,14 @@
 # Script Summary
 #   Compile datasets from flux data collected by researchers at 
-#   the Finnish Meteorological Institute (PI: A. Lohila)
+#   the Finnish Meteorological Institute (PI: A. Lohila, M. Aurela)
 #
 # Output files:
 #   ../data/Arctic_Flux/aggregate/FIJO.csv
 #   ../data/Arctic_Flux/aggregate/FILE.csv
 #   ../data/Arctic_Flux/aggregate/FISO.csv
+#   ../data/Arctic_Flux/aggregate/RUTK.csv
+#   ../data/Arctic_Flux/aggregate/RUTK.csv
+
 
 #-- Setup ---------------------------------------------------------------------
 # master function for creating new columns
@@ -20,6 +23,13 @@ mk_vars <- function(DT, var_key, mk_opt) {
   new_cols <- unlist(lapply(var_key, function(vars) vars[1]))
   DT[, (new_cols) := new_data]
   DT
+}
+
+# fread for multiple filepaths
+my_fread <- function(fps) {
+  rbindlist(lapply(fps, function(fp) {
+    fread(fp)
+  }))
 }
 
 #------------------------------------------------------------------------------
@@ -148,5 +158,48 @@ fwrite(jo, "../data/Arctic_Flux/aggregate/FIJO.csv")
 fwrite(le, "../data/Arctic_Flux/aggregate/FILE.csv")
 fwrite(so, "../data/Arctic_Flux/aggregate/FISO.csv")
 fwrite(tk, "../data/Arctic_Flux/aggregate/RUTK.csv")
+
+#------------------------------------------------------------------------------
+
+#-- FIKN ----------------------------------------------------------------------
+kn_fp <- "../raw_data/EFDC/1911409666/EFDC_L2_Flx_FIKns_2004_v04_30m.txt"
+kn_fps <- sapply(
+  c("2005_v08", "2006_v08", "2007_v08", "2008_v08", "2009_v08"), 
+  function(yr) gsub("1996_v05", yr, kn_fp), 
+  USE.NAMES = FALSE
+)
+
+kn <- my_fread(kn_fps)
+
+kn <- convert_ts(kn)
+
+kn[, stid := "FIKN"]
+
+kn_miss <- c("snowd", "lw_in", "lw_out", "swc", "precip")
+kn <- mk_vars(kn, kn_miss, "miss")
+
+# fix names
+kn_names <- list(
+  c("LE", "le"),
+  c("H", "h"),
+  c("G", "g"),
+  c("SW_IN", "sw_in"),
+  c("SW_OUT", "sw_out"),
+  c("NETRAD", "rnet"),
+  c("TA", "ta"),
+  c("RH", "rh"),
+  c("WS", "ws"),
+  c("WD", "wd"),
+  c("TS", "tsoil")
+)
+kn <- fix_names(kn, kn_names)
+
+# add missing qc flags
+kn <- add_qc(kn)
+
+# select columns
+kn <- sel_cols(kn)
+
+fwrite(kn, "../data/Arctic_Flux/aggregate/FIKN.csv")
 
 #------------------------------------------------------------------------------

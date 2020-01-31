@@ -7,7 +7,7 @@
 #   ../data/Arctic_Flux/aggregate/FILE.csv
 #   ../data/Arctic_Flux/aggregate/FISO.csv
 #   ../data/Arctic_Flux/aggregate/RUTK.csv
-#   ../data/Arctic_Flux/aggregate/RUTK.csv
+#   ../data/Arctic_Flux/aggregate/FIKN.csv
 
 
 #-- Setup ---------------------------------------------------------------------

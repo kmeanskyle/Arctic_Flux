@@ -11,9 +11,14 @@ mk_vars <- function(DT, var_key, mk_opt) {
   # aggregate multiple measurements via mean()
   aggr <- function(vars) {
     temp_dt <- as.data.table(lapply(vars[-1], function(var) DT[[var]]))
-    temp_dt[temp_dt == -9999] <- NA
-    temp_dt <- temp_dt[, (vars[1]) := rowMeans(.SD, na.rm = TRUE)]
-    temp_dt[which(is.na(temp_dt[[vars[1]]])), (vars[1]) := -9999]
+    miss_lst <- lapply(temp_dt, function(col) which(col == -9999))
+    for(j in seq_along(temp_dt)){
+      set(temp_dt, i=miss_lst[[j]], j=j, value=NA)
+    }
+    temp_dt[, (vars[1]) := rowMeans(.SD, na.rm = TRUE)]
+    new_miss <- Reduce(union, miss_lst)
+    new_miss <- intersect(new_miss, which(is.na(temp_dt[[vars[1]]])))
+    temp_dt[new_miss, (vars[1]) := -9999]
     temp_dt[[vars[1]]]
   }
   # Copy non-gapfilled data over missing (NA) values in gapfilled time series

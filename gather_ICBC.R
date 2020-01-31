@@ -155,8 +155,10 @@ convert_str_ts <- function(DT){
 #------------------------------------------------------------------------------
 
 #-- Main ----------------------------------------------------------------------
-library(magrittr)
-library(data.table)
+suppressMessages({
+  library(magrittr)
+  library(data.table)
+})
 
 # downloaded data stored in external drive
 raw_dir <- "../raw_data/ICBC"
